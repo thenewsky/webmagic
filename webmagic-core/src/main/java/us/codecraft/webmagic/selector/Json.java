@@ -3,6 +3,7 @@ package us.codecraft.webmagic.selector;
 import com.alibaba.fastjson.JSON;
 import us.codecraft.xsoup.XTokenQueue;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -54,4 +55,21 @@ public class Json extends PlainText {
         JsonPathSelector jsonPathSelector = new JsonPathSelector(jsonPath);
         return selectList(jsonPathSelector,getSourceTexts());
     }
+
+
+    public Json $(String jsonPath) {
+        JsonPathSelector jsonPathSelector = new JsonPathSelector(jsonPath);
+        return selectListToJson(jsonPathSelector,getSourceTexts());
+    }
+
+
+    protected Json selectListToJson(Selector selector, List<String> strings) {
+        List<String> results = new ArrayList<String>();
+        for (String string : strings) {
+            List<String> result = selector.selectList(string);
+            results.addAll(result);
+        }
+        return new Json(results);
+    }
+
 }
