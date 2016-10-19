@@ -34,11 +34,13 @@ public class LaGouPageProcessor implements PageProcessor {
     // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
     private Site site = Site.me().setRetryTimes(3).setSleepTime(1000);
     private Map<String, Result> results = new LinkedHashMap<String, Result>();
+    private boolean add_all_url = false;
 
+
+    private static SearchVo select_java_job =  new SearchVo("25k-50k", "北京", "java", "1");
     @Override
     // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
     public void process(Page page) {
-
 
 
         Html selectable = page.getHtml();
@@ -50,11 +52,22 @@ public class LaGouPageProcessor implements PageProcessor {
 
         if (!jsonString.isEmpty()) {
             Json json = new Json(jsonString);
+//            log(json);
             JsonRootBean jsonRootBean = json.toObject(JsonRootBean.class);
             List<String> urls = new ArrayList<String>();
             for (Result result : jsonRootBean.getContent().getPositionresult().getResult()) {
                 results.put("" + result.getPositionid(), result);
                 urls.add(result.getHtmlUrl());
+            }
+            if(!add_all_url){
+                int  count = jsonRootBean.getContent().getPositionresult().getTotalcount();
+                int  pageSize  = jsonRootBean.getContent().getPagesize();
+                int  pageCount = (int)Math.ceil(count*1d/pageSize);//总页数计算
+                for (int i = 0; i < pageCount; i++) {
+                    select_java_job.setPn(i+"");
+                    page.addTargetRequest(select_java_job.toString());
+                }
+                add_all_url= true;
             }
             page.addTargetRequests(urls);
         } else {
@@ -65,16 +78,7 @@ public class LaGouPageProcessor implements PageProcessor {
             if (results.keySet().contains(id)) {
                 Result result = results.get(id);
                 result.setContent(jsonString);
-//                log(
-//                        result.getSalary(),
-//                        result.getPositionname(),
-//                        result.getCompanyshortname(),
-////                  result.getCompanyfullname(),
-//                        result.getWorkyear(),
-//                        result.getHtmlUrl(),
-//                        result.getContent()
-//                );
-                page.getResultItems().put(result.getPositionid()+"",result);
+                page.getResultItems().put(result.getPositionid() + "", result);
             }
         }
     }
@@ -95,6 +99,9 @@ public class LaGouPageProcessor implements PageProcessor {
     }
 
     public static void main(String[] args) {
-        Spider.create(new LaGouPageProcessor()).addPipeline(new LaGouFilePipeLine()).addRequest(new Request(new SearchVo("25k-50k", "北京", "java", "1").toString())).thread(5).run();
+        Spider.create(new LaGouPageProcessor())
+                .addPipeline(new LaGouFilePipeLine())
+                .addRequest(new Request(select_java_job.toString()))
+                .thread(5).run();
     }
 }
