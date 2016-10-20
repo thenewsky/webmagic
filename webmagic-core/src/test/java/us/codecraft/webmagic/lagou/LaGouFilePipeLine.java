@@ -1,10 +1,12 @@
 package us.codecraft.webmagic.lagou;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.Consts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.ResultItems;
 import us.codecraft.webmagic.Task;
+import us.codecraft.webmagic.lagou.entityes.Result;
 import us.codecraft.webmagic.pipeline.FilePipeline;
 
 import java.io.FileOutputStream;
@@ -20,19 +22,27 @@ import java.util.Map;
  */
 public class LaGouFilePipeLine extends FilePipeline {
     {
-        setPath("/Users/apple/data/git/github/thenewsky/webmagic/log");
+        setPath(Constants.LaGou_FILE_PATH);
     }
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
     public void process(ResultItems resultItems, Task task) {
-        String path = this.path + PATH_SEPERATOR + task.getUUID() + PATH_SEPERATOR;
+        String path = Constants.getDBPath();
         try {
 
-
-            PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(getFile(path + "lagou.csv"),true),"UTF-8"));
+            Map<String, Result> ids = LaGouPageProcessor.getResults();
+            PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(getFile(path), true), "UTF-8"));
             for (Map.Entry<String, Object> entry : resultItems.getAll().entrySet()) {
+
+                if (ids.containsKey(entry.getKey())){
+                    logger.warn(entry.getKey()+"----- have in---");
+                    continue;
+                }
+
+                logger.warn(entry.getKey()+"----- new job");
+
                 if (entry.getValue() instanceof Iterable) {
                     Iterable value = (Iterable) entry.getValue();
                     for (Object o : value) {

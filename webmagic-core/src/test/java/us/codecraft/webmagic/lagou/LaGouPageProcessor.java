@@ -18,7 +18,9 @@ import us.codecraft.webmagic.selector.Json;
 import us.codecraft.webmagic.selector.PlainText;
 import us.codecraft.webmagic.selector.Selectable;
 
+import java.io.*;
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -33,11 +35,100 @@ public class LaGouPageProcessor implements PageProcessor {
     private static Logger logger = LoggerFactory.getLogger(LaGouPageProcessor.class);
     // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
     private Site site = Site.me().setRetryTimes(3).setSleepTime(1000);
-    private Map<String, Result> results = new LinkedHashMap<String, Result>();
+
     private boolean add_all_url = false;
 
+    private static SearchVo select_java_job = new SearchVo("25k-50k", "北京", "java", "1");
 
-    private static SearchVo select_java_job =  new SearchVo("25k-50k", "北京", "java", "1");
+
+    private static LaGouPageProcessor instance = null;
+    private static ReentrantLock lock = new ReentrantLock();
+
+    private LaGouPageProcessor() {
+    }
+
+    public static Map<String, Result> getResults() {
+        return results;
+    }
+
+    public static void setResults(Map<String, Result> results) {
+        LaGouPageProcessor.results = results;
+    }
+
+    private static Map<String, Result> results = new LinkedHashMap<String, Result>();
+    private static Set<String> contentSet = new HashSet<String>();
+
+    public static LaGouPageProcessor getInstance() {
+        if (instance == null) {
+            lock.lock();
+            if (instance == null) {
+                instance = new LaGouPageProcessor();
+            }
+            try {
+                loadDb();
+            } catch (IOException e) {
+
+                try {
+                    delDb();
+                    loadDb();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
+            lock.unlock();
+        }
+        return instance;
+    }
+
+
+    private static void delDb() {
+        String path = Constants.getDBPath();
+        File file = getFile(path);
+        file.deleteOnExit();
+    }
+
+
+    private static void loadDb() throws IOException {
+        String path = Constants.getDBPath();
+        File file = getFile(path);
+        if (!file.exists()) {
+            return;
+        }
+        FileReader fileReader = new FileReader(file);
+
+        BufferedReader bufferedReader = new BufferedReader(fileReader);
+        while (true) {
+            String line = bufferedReader.readLine();
+            if (line != null) {
+                int space_index = line.lastIndexOf(":\t");
+                String obj_str = line.substring(space_index + 1, line.length()).trim();
+                Result obj = JSON.parseObject(obj_str, Result.class);
+                results.put(obj.getPositionid() + "", obj);
+                contentSet.addAll(obj.getContentSet());
+            } else {
+                bufferedReader.close();
+                return;
+            }
+        }
+
+    }
+
+    public static File getFile(String fullName) {
+        checkAndMakeParentDirecotry(fullName);
+        return new File(fullName);
+    }
+
+    public static void checkAndMakeParentDirecotry(String fullName) {
+        int index = fullName.lastIndexOf("/");
+        if (index > 0) {
+            String path = fullName.substring(0, index);
+            File file = new File(path);
+            if (!file.exists()) {
+                file.mkdirs();
+            }
+        }
+    }
+
     @Override
     // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
     public void process(Page page) {
@@ -59,15 +150,15 @@ public class LaGouPageProcessor implements PageProcessor {
                 results.put("" + result.getPositionid(), result);
                 urls.add(result.getHtmlUrl());
             }
-            if(!add_all_url){
-                int  count = jsonRootBean.getContent().getPositionresult().getTotalcount();
-                int  pageSize  = jsonRootBean.getContent().getPagesize();
-                int  pageCount = (int)Math.ceil(count*1d/pageSize);//总页数计算
+            if (!add_all_url) {
+                int count = jsonRootBean.getContent().getPositionresult().getTotalcount();
+                int pageSize = jsonRootBean.getContent().getPagesize();
+                int pageCount = (int) Math.ceil(count * 1d / pageSize);//总页数计算
                 for (int i = 0; i < pageCount; i++) {
-                    select_java_job.setPn(i+"");
+                    select_java_job.setPn(i + "");
                     page.addTargetRequest(select_java_job.toString());
                 }
-                add_all_url= true;
+                add_all_url = true;
             }
             page.addTargetRequests(urls);
         } else {
@@ -93,15 +184,26 @@ public class LaGouPageProcessor implements PageProcessor {
         logger.info(sb.toString());
     }
 
+
     @Override
     public Site getSite() {
         return site;
     }
 
-    public static void main(String[] args) {
-        Spider.create(new LaGouPageProcessor())
-                .addPipeline(new LaGouFilePipeLine())
+
+    public void runLaGou() {
+        Spider.create(getInstance()).addPipeline(new LaGouFilePipeLine())
                 .addRequest(new Request(select_java_job.toString()))
                 .thread(5).run();
     }
+
+    public static void main(String[] args) {
+        LaGouPageProcessor a = LaGouPageProcessor.getInstance();
+        for (String string : contentSet) {
+            System.out.println(string);
+        }
+
+    }
+
+
 }

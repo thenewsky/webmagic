@@ -1,10 +1,15 @@
 /**
-  * Copyright 2016 aTool.org 
-  */
+ * Copyright 2016 aTool.org
+ */
 package us.codecraft.webmagic.lagou.entityes;
+
+import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 /**
  * Auto-generated: 2016-10-17 17:22:16
  *
@@ -72,7 +77,7 @@ public class Result {
     private String formatcreatetime;
 
 
-    private String  content;
+    private String content;
 
     public int getCompanyid() {
         return companyid;
@@ -339,62 +344,109 @@ public class Result {
     }
 
 
-
     public Object[] logObj() {
-        return new  Object[]{
+        return new Object[]{
                 companyid,
                 positionadvantage
         };
     }
+
     @Override
     public String toString() {
-        return "Result{" +
-                "companyid=" + companyid +
-                ", positionname='" + positionname + '\'' +
-                ", workyear='" + workyear + '\'' +
-                ", education='" + education + '\'' +
-                ", jobnature='" + jobnature + '\'' +
-                ", createtime='" + createtime + '\'' +
-                ", companyshortname='" + companyshortname + '\'' +
-                ", positionid=" + positionid +
-                ", salary='" + salary + '\'' +
-                ", approve=" + approve +
-                ", city='" + city + '\'' +
-                ", positionadvantage='" + positionadvantage + '\'' +
-                ", companylogo='" + companylogo + '\'' +
-                ", industryfield='" + industryfield + '\'' +
-                ", financestage='" + financestage + '\'' +
-                ", companylabellist=" + companylabellist +
-                ", district='" + district + '\'' +
-                ", companysize='" + companysize + '\'' +
-                ", score=" + score +
-                ", companyfullname='" + companyfullname + '\'' +
-                ", adword=" + adword +
-                ", lastlogin=" + lastlogin +
-                ", publisherid=" + publisherid +
-                ", explain='" + explain + '\'' +
-                ", plus='" + plus + '\'' +
-                ", pcshow=" + pcshow +
-                ", appshow=" + appshow +
-                ", deliver=" + deliver +
-                ", gradedescription='" + gradedescription + '\'' +
-                ", promotionscoreexplain='" + promotionscoreexplain + '\'' +
-                ", businesszones='" + businesszones + '\'' +
-                ", imstate='" + imstate + '\'' +
-                ", formatcreatetime='" + formatcreatetime + '\'' +
-                '}';
+        return JSON.toJSONString(this);
+//        return "Result{" +
+//                "companyid=" + companyid +
+//                ", positionname='" + positionname + '\'' +
+//                ", workyear='" + workyear + '\'' +
+//                ", education='" + education + '\'' +
+//                ", jobnature='" + jobnature + '\'' +
+//                ", createtime='" + createtime + '\'' +
+//                ", companyshortname='" + companyshortname + '\'' +
+//                ", positionid=" + positionid +
+//                ", salary='" + salary + '\'' +
+//                ", approve=" + approve +
+//                ", city='" + city + '\'' +
+//                ", positionadvantage='" + positionadvantage + '\'' +
+//                ", companylogo='" + companylogo + '\'' +
+//                ", industryfield='" + industryfield + '\'' +
+//                ", financestage='" + financestage + '\'' +
+//                ", companylabellist=" + companylabellist +
+//                ", district='" + district + '\'' +
+//                ", companysize='" + companysize + '\'' +
+//                ", score=" + score +
+//                ", companyfullname='" + companyfullname + '\'' +
+//                ", adword=" + adword +
+//                ", lastlogin=" + lastlogin +
+//                ", publisherid=" + publisherid +
+//                ", explain='" + explain + '\'' +
+//                ", plus='" + plus + '\'' +
+//                ", pcshow=" + pcshow +
+//                ", appshow=" + appshow +
+//                ", deliver=" + deliver +
+//                ", gradedescription='" + gradedescription + '\'' +
+//                ", promotionscoreexplain='" + promotionscoreexplain + '\'' +
+//                ", businesszones='" + businesszones + '\'' +
+//                ", imstate='" + imstate + '\'' +
+//                ", formatcreatetime='" + formatcreatetime + '\'' +
+//                '}';
     }
 
     public String getContent() {
         return content;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+
+    public Set<String> getContentSet() {
+        Set<String> set = new HashSet<String>();
+        String[] ss = content.split("\n");
+        for (String s : ss) {
+            String  tmp = s.trim();
+            if (!tmp.isEmpty()){
+                set.add(tmp);
+            }
+        }
+        return set;
     }
+
+
+    public void setContent(String content) {
+
+        this.content = content.replaceAll("</?[^<]+>", "").replaceAll("&nbsp;", "").replaceAll("</span", "");
+        this.content = filterN(this.content);
+//                content.replaceAll("dd class=\"job_bt\">","")
+//        .replaceAll("<span class=\"\"><br></span><span class=\"\">","")
+//        .replaceAll("</span>","\n")
+//        .replaceAll("</p>","")
+//                .replaceAll("<p>","")
+//                .replaceAll("<br>","")
+//                .replaceAll("</dd>","");
+//        this.content = content;
+    }
+
+
+    public String filter(String content, Set<String> filters) {
+        for (String filter : filters) {
+            content = content.replaceAll(filter, "");
+        }
+        return content;
+    }
+
+
+    public String filterN(String content) {
+//        return content.replaceAll("\\d+\\.", "\n");
+        return content.replaceAll("\\d+(\\.|\\、)", "\n");
+    }
+
 
     //http://www.lagou.com/jobs/5005509.html
     public String getHtmlUrl() {
-        return "http://www.lagou.com/jobs/"+positionid+".html";
+        return "http://www.lagou.com/jobs/" + positionid + ".html";
+    }
+
+
+    public static void main(String[] args) {
+        String str = "1.1.1.1.1.1";
+        System.out.println(str.replaceAll("\\d+\\.", "\n"));
+
     }
 }
