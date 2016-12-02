@@ -173,6 +173,9 @@ To write webmagic, I refered to the projects below :
 
 QQ Group: 373225642
 
+### Related Project
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/code4craft/webmagic/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+* <a href="https://github.com/gsh199449/spider" target="_blank">Gather Platform</a>
+	
+	A web console based on WebMagic for Spider configuration and management.
 
