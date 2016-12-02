@@ -11,6 +11,7 @@ import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.lagou.entityes.JsonRootBean;
 import us.codecraft.webmagic.lagou.entityes.Result;
+import us.codecraft.webmagic.lagou.util.FileUtil;
 import us.codecraft.webmagic.lagou.vo.SearchVo;
 import us.codecraft.webmagic.processor.PageProcessor;
 import us.codecraft.webmagic.selector.Html;
@@ -23,6 +24,8 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.useIsoDateFormat;
+import static org.assertj.core.api.Assertions.useIsoDateTimeFormat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -34,11 +37,13 @@ public class LaGouPageProcessor implements PageProcessor {
 
     private static Logger logger = LoggerFactory.getLogger(LaGouPageProcessor.class);
     // 部分一：抓取网站的相关配置，包括编码、抓取间隔、重试次数等
-    private Site site = Site.me().setRetryTimes(3).setSleepTime(1000);
+    private Site site = Site.me().setRetryTimes(3).setSleepTime(5000);
 
     private boolean add_all_url = false;
 
     private static SearchVo select_java_job = new SearchVo("25k-50k", "北京", "java", "1");
+
+    private static SearchVo select_ui_job = new SearchVo("5k-10k", "北京", "ui", "1");
 
 
     private static LaGouPageProcessor instance = null;
@@ -99,7 +104,7 @@ public class LaGouPageProcessor implements PageProcessor {
         BufferedReader bufferedReader = new BufferedReader(fileReader);
         while (true) {
             String line = bufferedReader.readLine();
-            if (line != null) {
+            if (line != null&& !line.trim().isEmpty()) {
                 int space_index = line.lastIndexOf(":\t");
                 String obj_str = line.substring(space_index + 1, line.length()).trim();
                 Result obj = JSON.parseObject(obj_str, Result.class);
@@ -132,6 +137,15 @@ public class LaGouPageProcessor implements PageProcessor {
     @Override
     // process是定制爬虫逻辑的核心接口，在这里编写抽取逻辑
     public void process(Page page) {
+        select_ui_job(page);
+    }
+
+
+
+
+
+
+    public void select_java_job(Page page) {
 
 
         Html selectable = page.getHtml();
@@ -174,6 +188,53 @@ public class LaGouPageProcessor implements PageProcessor {
         }
     }
 
+
+
+    public void select_ui_job(Page page) {
+
+
+        Html selectable = page.getHtml();
+
+
+        Selectable xpath = selectable.xpath("//html/body/text()");//json 过滤
+
+        String jsonString = xpath.toString().trim();
+
+        if (!jsonString.isEmpty()) {
+            Json json = new Json(jsonString);
+//            log(json);
+            JsonRootBean jsonRootBean = json.toObject(JsonRootBean.class);
+            List<String> urls = new ArrayList<String>();
+            for (Result result : jsonRootBean.getContent().getPositionresult().getResult()) {
+                results.put("" + result.getPositionid(), result);
+                urls.add(result.getHtmlUrl());
+            }
+            if (!add_all_url) {
+                int count = jsonRootBean.getContent().getPositionresult().getTotalcount();
+                int pageSize = jsonRootBean.getContent().getPagesize();
+                int pageCount = (int) Math.ceil(count * 1d / pageSize);//总页数计算
+                for (int i = 0; i < pageCount; i++) {
+                    select_ui_job.setPn(i + "");
+                    page.addTargetRequest(select_ui_job.toString());
+                }
+                add_all_url = true;
+            }
+            page.addTargetRequests(urls);
+        } else {
+            String[] subs = page.getUrl().toString().split("/");
+            String id = subs[subs.length - 1].replace(".html", "");
+
+            xpath = selectable.xpath("//*[@id=\"job_detail\"]/dd[2]");
+            jsonString = xpath.toString().trim();
+            if (results.keySet().contains(id)) {
+                Result result = results.get(id);
+                result.setContent(jsonString);
+                result.setAdress(selectable.xpath("//*[@id=\"job_company\"]/dd/div[1]/text()").toString().trim());
+                page.getResultItems().put(result.getPositionid() + "", result);
+            }
+        }
+    }
+
     public static void log(Object... objs) {
         StringBuffer sb = new StringBuffer();
         for (Object obj : objs
@@ -197,12 +258,54 @@ public class LaGouPageProcessor implements PageProcessor {
                 .thread(5).run();
     }
 
-    public static void main(String[] args) {
-        LaGouPageProcessor a = LaGouPageProcessor.getInstance();
-        for (String string : contentSet) {
-            System.out.println(string);
-        }
+    public void runUILaGou() {
+        Spider.create(getInstance()).addPipeline(new LaGouFilePipeLine())
+                .addRequest(new Request(select_ui_job.toString()))
+                .thread(5).run();
+    }
 
+    public static void main(String[] args) throws FileNotFoundException, UnsupportedEncodingException {
+        new LaGouPageProcessor().runUILaGou();
+
+    }
+
+    public void test(){
+        //            new LaGouPageProcessor().runUILaGou();
+//        String res_path = System.getProperty("user.dir") + "/log/content.txt";
+//        LaGouPageProcessor a = LaGouPageProcessor.getInstance();
+////        for (String string : contentSet) {
+////            System.out.println(string);
+////            FileUtil.printWriter(res_path,string);
+////        }
+////
+//        int size = 0;
+//        StringBuffer sb = new StringBuffer();
+//        Set<String>  hit = new HashSet<String>();
+//        for (String key : Constants.getKeyValues()) {
+////            System.out.println(key);
+//
+//            for (String string : contentSet) {
+//                if (string.toLowerCase().contains(key.toLowerCase())) {
+//                    sb.append(string + "\n");
+//                    size++;
+////                    System.out.println(string);
+//                    hit.add(string);
+//                }
+//
+////                System.out.println(string);
+////                FileUtil.printWriter(res_path,string);
+//            }
+//            System.out.println("key-words : " + key + "一共出现了:" + size + "次");
+////            System.out.println(sb.toString());
+//
+//        }
+//        Set<String> values = new HashSet<String>(contentSet);
+//        values.removeAll(hit);
+////        for (String string : values) {
+////            System.out.println(string);
+////        }
+//        System.out.println(values.size());
+//        ;
     }
 
 

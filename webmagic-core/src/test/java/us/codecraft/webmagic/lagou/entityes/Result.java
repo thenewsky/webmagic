@@ -79,6 +79,8 @@ public class Result {
 
     private String content;
 
+    private String adress;
+
     public int getCompanyid() {
         return companyid;
     }
@@ -353,7 +355,8 @@ public class Result {
 
     @Override
     public String toString() {
-        return JSON.toJSONString(this);
+        return    this.adress+ " "+ this.getHtmlUrl();
+//        return JSON.toJSONString(this);
 //        return "Result{" +
 //                "companyid=" + companyid +
 //                ", positionname='" + positionname + '\'' +
@@ -448,5 +451,14 @@ public class Result {
         String str = "1.1.1.1.1.1";
         System.out.println(str.replaceAll("\\d+\\.", "\n"));
 
+    }
+
+
+    public String getAdress() {
+        return adress;
+    }
+
+    public void setAdress(String adress) {
+        this.adress = adress;
     }
 }

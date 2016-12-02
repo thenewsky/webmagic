@@ -7,12 +7,10 @@ import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.ResultItems;
 import us.codecraft.webmagic.Task;
 import us.codecraft.webmagic.lagou.entityes.Result;
+import us.codecraft.webmagic.lagou.util.FileUtil;
 import us.codecraft.webmagic.pipeline.FilePipeline;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.Map;
 
 /**
@@ -31,30 +29,31 @@ public class LaGouFilePipeLine extends FilePipeline {
     public void process(ResultItems resultItems, Task task) {
         String path = Constants.getDBPath();
         try {
-
+            StringBuffer stringBuffer = new StringBuffer();
             Map<String, Result> ids = LaGouPageProcessor.getResults();
-            PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(getFile(path), true), "UTF-8"));
             for (Map.Entry<String, Object> entry : resultItems.getAll().entrySet()) {
 
-                if (ids.containsKey(entry.getKey())){
-                    logger.warn(entry.getKey()+"----- have in---");
-                    continue;
-                }
+//                if (ids.containsKey(entry.getKey())) {
+//                    logger.warn(entry.getKey() + "----- have in---");
+//                    continue;
+//                }
 
-                logger.warn(entry.getKey()+"----- new job");
+                logger.warn(entry.getKey() + "----- new job");
 
                 if (entry.getValue() instanceof Iterable) {
                     Iterable value = (Iterable) entry.getValue();
                     for (Object o : value) {
-                        printWriter.println(o);
+                        stringBuffer.append(o);
                     }
                 } else {
-                    printWriter.println(entry.getKey() + ":\t" + entry.getValue());
+                    stringBuffer.append(entry.getKey() + ":\t" + entry.getValue());
                 }
             }
-            printWriter.close();
+            FileUtil.printWriter(path, stringBuffer.toString());
         } catch (IOException e) {
             logger.warn("write file error", e);
         }
     }
+
+
 }
